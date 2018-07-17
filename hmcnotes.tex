@@ -1,0 +1,151 @@
+\documentclass[11pt, oneside]{article}   	% use "amsart" instead of "article" for AMSLaTeX format
+\usepackage{geometry}                		% See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   		% ... or a4paper or a5paper or ... 
+%\geometry{landscape}                		% Activate for for rotated page geometry
+%\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}				% Use pdf, png, jpg, or eps with pdflatex; use eps in DVI mode
+								% TeX will automatically convert eps --> pdf in pdflatex		
+\usepackage{amsmath,amssymb}
+
+\title{Hamiltonian Monte Carlo Notes}
+\author{Alex Kim}
+%\date{}							% Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+
+
+
+\section{MCMC}
+MCMC is a  class of algorithms for sampling from a probability distribution.  
+A Markov chain is a progression of points generated sequentially through a Markov transition $\mathbb{T}(q'|q)$.
+A probability distribution $\pi$ is called the invariant distribution for $\mathbb{T}$ if
+\begin{equation}
+\pi(q) = \int_Q dq'  \pi(q') \mathbb{T}(q|q').
+\label{condition:eqn}
+\end{equation}
+Multiple choice of $\mathbb{T}$ can have the invariant distribution $\pi$.  We want to choose
+a transition that is efficient.
+
+
+\subsection{Gibbs Sampling}
+The transition is the drawn directly from the posterior.  $\pi$ is trivially the invariant distribution for
+$\mathbb{T}(q|q') = \pi(q|q')$.
+This is efficient but practically the conditional distributions are not easy to sample from.
+
+\subsection{Metropolis Algorithm}
+The Metropolis Algorithm is a transition that satisfies detailed balance
+$\pi(q') \mathbb{T}(q|q') = \pi(q) \mathbb{T}(q'|q)$.
+ $\pi$ is trivially the invariant distribution for such a transition.
+
+
+The transition is determined by drawing a candidate
+parameter  a proposal distribution $g(q'|q)$, which is then weighted by
+the acceptance ratio $A(q',q)$ (the probability of accepting
+the new state) so that their product is the conditional probability
+\begin{align}
+\pi(q|q')  &= g(q|q') A(q,q').
+\end{align}
+
+The detailed balance gives the condition for the acceptance ratio:
+\begin{align}
+\frac{\pi(q'|q)}{\pi(q|q')}&  = \frac{\pi(q')}{\pi(q)} \\
+\frac{A(q',q)}{A(q,q')}&  = \frac{\pi(q')}{\pi(q)} \frac{g(q|q')}{g(q'|q)}.
+\end{align}
+
+
+The Metropolis choice for the acceptance ratio that satisfies the above is
+\begin{equation}
+A(q',q) = \min{\left(1, \frac{\pi(q')}{\pi(q)} \frac{g(q|q')}{g(q'|q)} \right)}.
+\end{equation}
+
+The procedure to generate a new link is
+\begin{enumerate}
+\item Generate a candidate state $q'$.
+\item Calculate the acceptance probability $A(q',q)$.
+\item Accept or Reject using a random number generator and $A(q',q)$.
+\end{enumerate}
+
+The challenge is to choose a $g(q'|q)$ that efficiently traverses the phase space. 
+The proposal distribution has to pick $q'$'s that span the large subvolume in
+which the acceptance probability is high.  For the standard Metropolis-Hastings
+algorithm the proposal distribution
+draws from the volume surrounding the current point.  Some of that volume
+has low probability, some high.  With increasing dimensionality, the ratio between low-
+and high-probability volume increases.
+This is problematic.
+
+\section{HMC}
+\subsection{Mechanical Introduction}
+Suppose there a volume with a potential $U(q)$ whose shape you want to determine.  This can be done 
+with a test particle of mass $m$.  Let us make a chain of positions using the following iterative procedure.
+From position $q_i$  a particle is assigned a random momentum
+drawn from a normal distribution $p_. \sim \mathcal{N}(0, \sqrt{m})$.  The position it ends up
+at after some time $t$ is taken as the new position $q_{i+1}$.
+The positions are drawn from $\exp{\left(-U(q)\right)}$!
+
+Why does this work? 
+Consider the joint distribution
+\begin{align}
+\pi(q,p) & = \frac{1}{Z} \exp{\left(-H(q,p)\right)}\\
+& = \frac{1}{Z} \exp{\left(-(U(q)+K(p))\right)},
+\end{align}
+where $K$ is the kinetic energy.  (Note that this is the phase-space distribution of the canonical ensemble for $kT=1$.)
+
+What we did is make a Markov Chain with transition steps that keeps the distribution invariant, ensuring that the
+chain has the same distribution as $\pi(q,p)$.  We specifically drew $p_.$ from the conditional probability
+$\pi(p|q)$ while holding $q_i$ fixed, which keeps the distribution invariant.  We deterministically chose
+$q_{i+1}$ ensuring that the value of $H$ is constant, which keeps the distribution invariant.
+Marginalizing the chain over $p$ recovers the distribution
+\begin{equation}
+\int \pi(q,p) dp=\int \pi(q)\pi(p) dp = \pi(q) =\exp{\left(-U(q)\right)}.
+\end{equation}
+
+The stochastic selection of momentum makes all volume available (for reasonable potentials) and minima
+in the potential are sources of attraction.  There is weak correlation between points.
+
+\subsection{Generalization to HMC}
+
+HMC is an efficient MCMC.  The number of parameters is doubled, but
+in such a way that marginalizing the joint pdf over the new parameters gives
+the target pdf over the original parameters.  The new parameters provide
+a procedure to efficiently traverse volume  far
+from the current point with high joint probability,
+and pick out candidate points with 100\% acceptance
+(in theory, close in practice).
+
+Auxiliary momentum parameters $p$ are introduced.  The $p$'s are not arbitrary.
+In order for Hamilton's Equations to apply, phase-space volumes are constant so that for any transformation
+of variables, $dq\,dp = dq'\,dp'$. 
+Their canonical distribution in phase space is written as
+\begin{align}
+\pi(q,p) & = \pi(p|q) \pi(q)\\
+& = \exp{\left(-H(q,p)\right)}\\
+H(q,p) & \equiv -\ln{\pi(p|q)}  -\ln{\pi(q)}.
+\end{align}
+For the moment we have not specified what the kinetic energy term $-\ln{\pi(p|q)}$ exactly is.
+
+The dynamics are given by Hamilton's equations
+\begin{align}
+\frac{dq_i}{dt} & = \frac{\partial H}{\partial p_i} \\
+\frac{dp_i}{dt} & = -\frac{\partial H}{\partial q_i}.
+\end{align}
+
+The MCMC transitions are the same as those described in the previous section.
+From position $q_i$ a particle is assigned a random momentum $p_.$
+drawn from a distribution $\pi(p|q_i)$.  
+Hamilton's Equations are solved to give the position of the particle after some time interval,
+which is taken as the new position $q_{i+1}$.  The canonical distribution
+is invariant with both these transitions.  The resulting chain, marginalized over $p$ has
+the stationary distribution $\pi(q)$.
+
+Solving Hamilton's equations takes some work!
+
+Things to optimize is that $p$ distribution, e.g.\ the values of $m_i$, and what $t$ to pick on the path
+that gives a good sample on that path.
+
+Hamiltonian invariant means perfect acceptance.
+
+Constant volume means no need to compute the Jacobian.
+
+\end{document}  
