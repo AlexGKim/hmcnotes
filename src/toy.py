@@ -19,7 +19,7 @@ def qpt(t, q_0, p_0):
     B = p_0/w
     return A*numpy.cos(w*t)+B*numpy.sin(w*t),-w*A*numpy.sin(w*t)+w*B*numpy.cos(w*t)
 
-n = 100
+n = 500
 q = [0.5]
 p = [0.1]
 t= 65.24
@@ -34,11 +34,13 @@ for i in range(n):
 
 fig, ax = plt.subplots()
 xdata, ydata = [], []
-ln, = plt.plot([], [], 'ro', animated=True)
+ln, = plt.plot([], [], 'ro', animated=True,ms=2)
 
 def init():
     ax.set_xlim(-5,5)
     ax.set_ylim(-5,5)
+    ax.set_xlabel('q')
+    ax.set_ylabel('p')
     return ln,
 
 def update(frame):
@@ -53,12 +55,12 @@ Writer = matplotlib.animation.writers['ffmpeg']
 writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
 
 ani.save("temp.mp4",writer=writer)
-qdwqw
 
 plt.clf()
 q=numpy.array(q)
 
-plt.hist(q,normed=True,bins=100)
+plt.hist(q,density=True,bins=50)
 x = numpy.arange(-3.5,3.5,0.001)
 plt.plot(x,numpy.exp(-U(x))/numpy.sqrt(2*numpy.pi))
-plt.show()
+plt.xlabel('q')
+plt.savefig("temp.pdf")
