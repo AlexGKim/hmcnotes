@@ -57,12 +57,16 @@ def sideplot(index):
     qpath = qpt(dum,q[index],p_prop[index])
     q2path = qpt(dum,q2[index],p2_prop[index])
     plt.scatter(qpath[0],q2path[0],s=2)
-    plt.scatter(q[1],q2[1])
+    plt.scatter(q[index+1],q2[index+1])
     plt.savefig("{}_2.pdf".format(index))
 
+plt.clf()
 sideplot(0)
+plt.clf()
 sideplot(1)
+plt.clf()
 sideplot(2)
+plt.clf()
 
 fig, ax = plt.subplots()
 xdata, ydata = [], []
